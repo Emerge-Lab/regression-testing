@@ -13,6 +13,7 @@ def log(data, my_param, project_name, curr_date, num_steps):
         "dataset": "CIFAR-100",
         "epochs": 10,
         "steps" : 1000,
+        "date":curr_date,
         })
 
     steps = num_steps
