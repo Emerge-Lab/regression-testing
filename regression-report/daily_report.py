@@ -5,6 +5,8 @@ import warnings
 import wandb
 import argparse
 
+
+print(os.environ)
 wandb_key =  os.environ.get("wandbKey")
 # print(wandb_key)
 if not wandb_key:
