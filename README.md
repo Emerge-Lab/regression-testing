@@ -1,7 +1,7 @@
 Regression testing tool using Wandb API.
 
 ## Usage:
-The tool is most efficiently used through importing the PyPI package for the tool:
+The tool can be used through importing the PyPI package for the tool:
 
 ` from regressiontestingreport import report_generation `
 
