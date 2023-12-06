@@ -1,7 +1,7 @@
 import wandb
 import subprocess
 
-def log(data, my_param, project_name, curr_date, num_steps): 
+def log(data, my_param, project_name, curr_date, num_steps=1): 
     git_commit = subprocess.check_output(["git", "rev-parse", "HEAD"]).strip().decode("utf-8")
     wandb.init(
         # Set the project where this run will be logged
@@ -20,8 +20,7 @@ def log(data, my_param, project_name, curr_date, num_steps):
 
         })
 
-    steps = num_steps
-    for step in range(steps):
+    for step in range(num_steps):
         wandb.log({f"{my_param}": (data[my_param])[step]})
 
     wandb.finish()

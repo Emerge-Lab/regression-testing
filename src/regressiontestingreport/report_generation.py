@@ -1,5 +1,5 @@
 import wandb
-from .log_parameter import log
+from log_parameter import log
 import wandb.sdk.wandb_metric
 import wandb.apis.reports as wr
 from datetime import date, datetime
@@ -19,7 +19,7 @@ def log_last_values(param, project_name, entity_name):
         if len(run_vals) != 0:
             last_vals.append(run_vals[-1])
             last_vals_date.append(run.config["date"])
-            last_vals_commit.append(run.config["commit"])
+            # last_vals_commit.append(run.config["commit"])
 
     last_vals.reverse()
     last_vals_date.reverse()
@@ -48,28 +48,10 @@ def log_last_values(param, project_name, entity_name):
     wandb.finish()
     return last_vals
 
-def generate_report(param, project_name, entity_name):
-
-    api = wandb.Api()
-    my_runs = api.runs(path=f"{entity_name}/{project_name}")
-    run_vals = []
-    for run in my_runs:
-        history = run.scan_history(keys=[f"{param}"])
-        run_vals.append([row[f"{param}"] for row in history])
-    if len(run_vals) == 0:
-        return -1
-    
-    curr_date = date.today()
-
-    log_last_values(param, project_name, entity_name)
-
-    report = wr.Report(
-        project=project_name,
-        title=f'{curr_date}' + "\'s report",
-        description="Here are the runs up to this date.",
-        blocks=[
-            wr.H1(f"All runs for project {project_name} with parameter: {param}"),
-            wr.PanelGrid(
+def get_parameter_runs_block(project_name, entity_name, param):
+    param_run_block = {
+        "header" : wr.H1(f"All runs for project {project_name} with parameter: {param}"),
+        "panel_grid" : wr.PanelGrid(
                 panels=[
                     wr.LinePlot(
                         title="Recent Graphs for:" + f"{param}",
@@ -93,58 +75,73 @@ def generate_report(param, project_name, entity_name):
                     wr.Runset(project=project_name, entity=entity_name, query=f"{param}", name=f"Runs with {param}"),
                 ],
             ),
+    }
+    return param_run_block
 
+def get_last_values_block(project_name, entity_name, param):
+    last_value_block = {
+        "header" :  wr.H1(f"Last values for project {project_name} with parameter: {param}"),
+        "panel_grid" : wr.PanelGrid(
+            panels=[
+                wr.LinePlot(
+                    title="Last Value Graph:",
+                    y="Last Values",
+                    title_x="Date",
+                    title_y="{param}",
+                    range_y=[0, 2],
+                    ignore_outliers=True,
+                    max_runs_to_show=1,
+                    font_size="large",
+                    legend_position="west",
+                ),
+                
+            ],
+            runsets=([[
+                wr.Runset(project=project_name, entity=entity_name, query="Last Value Log", name=f"Last Values of Runs"),
+            ][-1]]),
+        ),
+    }
+    return last_value_block
 
-            wr.H1(f"Last values for project {project_name} with parameter: {param}"),
-            wr.PanelGrid(
-                panels=[
-                    wr.LinePlot(
-                        title="Last Value Graph:",
-                        y="Last Values",
-                        title_x="Date",
-                        title_y="Last Values",
-                        range_y=[0, 2],
-                        ignore_outliers=True,
-                        max_runs_to_show=1,
-                        font_size="large",
-                        legend_position="west",
-                    ),
-                    
-                ],
-                runsets=([[
-                    wr.Runset(project=project_name, entity=entity_name, name=f"Last Values of Runs"),
-                ][-1]]),
-            ),
+def get_all_runs_block(project_name, entity_name):
+    all_runs_block = {
+        "header" : wr.H1(f"All runs for project: {project_name}"),
+        "panel_grid" : wr.PanelGrid(
+            panels=[
+            ],
+            runsets=[
+                wr.Runset(project=project_name, entity=entity_name, name="Complete Run Set")
+            ],
+        ),
+    }
+    return all_runs_block
 
+def generate_report(param, project_name, entity_name):
+    curr_date = date.today()
 
+    log_last_values(param, project_name, entity_name)
 
-            wr.H1(f"All runs for project: {project_name}"),
-            wr.PanelGrid(
-                panels=[
-                    # wr.LinePlot(
-                    #     title="Recent Graphs for:" + f"{my_param}",
-                    #     y=f"{my_param}",
-                    #     title_x="steps",
-                    #     title_y="{my_param}",
-                    #     ignore_outliers=True,
-                    #     smoothing_factor=0.5,
-                    #     smoothing_type="gaussian",
-                    #     smoothing_show_original=True,
-                    #     max_runs_to_show=10,
-                    #     plot_type="stacked-area",
-                    #     font_size="large",
-                    #     legend_position="west",
-                    # )
-                ],
+    param_runs_block = get_parameter_runs_block(project_name, entity_name,  param)
+    last_value_block = get_last_values_block(project_name, entity_name, param)
+    all_runs_block = get_all_runs_block(project_name, entity_name)
 
-                # runsets=[wr.Runset(project=project_name, entity=entity_name)]
-                runsets=[
-                    wr.Runset(project=project_name, entity=entity_name, name="Complete Run Set")
-                ],
-            )
-        ]   
-    ).save()                       
-                    
-    wr.Report.from_url(report.url) 
+    report_blocks=[
+        param_runs_block["header"],
+        param_runs_block["panel_grid"],
 
-    return 0
+        last_value_block["header"],
+        last_value_block["panel_grid"],
+
+        all_runs_block["header"],
+        all_runs_block["panel_grid"],
+    ]
+
+    report = wr.Report(
+        project=project_name,
+        title=f'{curr_date}' + "\'s report",
+        description="Here are the runs up to this date.",
+        blocks = report_blocks,  
+    ).save()                     
+                
+    return report
+
